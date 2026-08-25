@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .. import models
 from ..database import get_db
 from ..routes.auth import get_current_user
-from ..llm.client import generate_response, stream_response
+from ..llm.client import stream_response
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -43,25 +43,32 @@ def chat_stream(request: ChatRequest, current_user: models.User = Depends(get_cu
         
     conv = get_or_create_conversation(db, current_user.id, request.conversation_id)
     
-    # Save user message
+    # 1. Grab recent history BEFORE saving the new message
+    # Limiting to last 10 messages (5 user/5 AI) for context to maintain speed/token limits
+    db_messages = db.query(models.Message).filter(models.Message.conversation_id == conv.id).order_by(models.Message.created_at.asc()).all()
+    recent_messages = db_messages[-10:]
+    history_payload = [{"role": m.role, "content": m.content} for m in recent_messages]
+
+    # 2. Save user message
     user_msg = models.Message(conversation_id=conv.id, role="user", content=request.message)
     db.add(user_msg)
     db.commit()
 
-    # Generate title if it's the first message
     if conv.title == "New Session":
         conv.title = request.message[:30] + ("..." if len(request.message) > 30 else "")
         db.commit()
 
-    # Generator wrapper to intercept and save the full AI response
     def stream_and_save():
         full_response = ""
-        # Tell the frontend the conversation ID immediately
         yield f"data: {json.dumps({'conversation_id': conv.id})}\n\n"
         
-        for chunk in stream_response(prompt=request.message, system_instruction=SIDDQUE_SYSTEM_INSTRUCTION):
+        # Inject history_payload into the LLM call
+        for chunk in stream_response(
+            prompt=request.message, 
+            system_instruction=SIDDQUE_SYSTEM_INSTRUCTION,
+            history=history_payload
+        ):
             yield chunk
-            # Extract text to save to DB
             if chunk.startswith("data: ") and "[DONE]" not in chunk:
                 try:
                     data = json.loads(chunk[6:])
@@ -69,7 +76,6 @@ def chat_stream(request: ChatRequest, current_user: models.User = Depends(get_cu
                         full_response += data["text"]
                 except: pass
                 
-        # Save assistant message once stream finishes
         ai_msg = models.Message(conversation_id=conv.id, role="assistant", content=full_response)
         db.add(ai_msg)
         db.commit()

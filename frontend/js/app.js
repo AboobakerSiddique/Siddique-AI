@@ -187,6 +187,7 @@ async function sendMessage() {
                             if (isFirstMessage) loadConversations(); // Refresh sidebar to show new title
                         }
                         
+                        if (parsed.error) { assistantDiv.innerHTML = `<span style='color: #ff5555;'>${parsed.error}</span>`; scrollToBottom(); break; }
                         if (parsed.text) {
                             fullResponse += parsed.text;
                             assistantDiv.innerHTML = marked.parse(fullResponse);
