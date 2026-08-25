@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siddque AI</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="screen">
+        <div class="auth-box">
+            <h1 class="logo">Siddque <span>AI</span></h1>
+            <p>Authentication Required</p>
+            <input type="email" id="email" placeholder="Email" autocomplete="off">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Initialize</button>
+            <p id="auth-error" class="error"></p>
+        </div>
+    </div>
+
+    <!-- Main Chat Screen -->
+    <div id="chat-screen" class="screen hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="logo-small">Siddque <span>AI</span></h2>
+            </div>
+            <button class="new-chat-btn">+ New Chat</button>
+            <div class="conversation-list">
+                <div class="conv-item active">Current Session</div>
+            </div>
+            <div class="sidebar-footer">
+                <button id="logout-btn">Disconnect</button>
+            </div>
+        </aside>
+        
+        <main class="chat-area">
+            <div id="messages-container" class="messages-container">
+                <div class="empty-state">
+                    <h1 class="logo-large">Siddque <span>AI</span></h1>
+                    <p>System ready. What are we building?</p>
+                </div>
+            </div>
+            <div class="input-container">
+                <textarea id="chat-input" placeholder="Message Siddque AI... (Shift+Enter for newline)" rows="1"></textarea>
+                <button id="send-btn">Send</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- We'll use Marked.js to render Markdown easily -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
