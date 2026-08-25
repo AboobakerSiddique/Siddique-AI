@@ -68,3 +68,26 @@ button:hover { background: var(--maroon-hover); }
 textarea { flex: 1; background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-main); padding: 14px 18px; border-radius: 24px; resize: none; outline: none; font-size: 15px; line-height: 1.5; }
 textarea:focus { border-color: var(--maroon-primary); }
 #send-btn { width: auto; padding: 0 24px; border-radius: 24px; }
+
+/* --- Phase 10: Markdown & Scroll Polish --- */
+
+/* Custom Dark Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--maroon-primary); }
+
+/* Markdown Typography & Elements */
+.message ul, .message ol { margin-left: 20px; margin-bottom: 12px; }
+.message li { margin-bottom: 6px; }
+.message strong { color: #ffffff; font-weight: 600; }
+
+.message table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 14px; border-radius: 6px; overflow: hidden; }
+.message th, .message td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+.message th { background: #0c0c0c; color: var(--maroon-primary); font-weight: 600; }
+.message tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+
+.message blockquote { border-left: 3px solid var(--maroon-primary); margin: 15px 0; padding-left: 15px; color: var(--text-muted); font-style: italic; background: rgba(138, 28, 39, 0.05); padding: 10px 15px; border-radius: 0 6px 6px 0; }
+
+.message a { color: var(--maroon-primary); text-decoration: none; border-bottom: 1px dashed var(--maroon-primary); transition: all 0.2s; }
+.message a:hover { color: #ff4d4d; border-bottom-style: solid; }

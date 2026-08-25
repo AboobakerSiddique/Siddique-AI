@@ -1,6 +1,6 @@
 
 const API_URL = 'http://127.0.0.1:8000';
-let token = localStorage.getItem('siddque_token');
+let token = localStorage.getItem('siddique_token');
 let currentConversationId = null;
 
 // DOM Elements
@@ -44,7 +44,7 @@ loginBtn.addEventListener('click', async () => {
         
         const data = await res.json();
         token = data.access_token;
-        localStorage.setItem('siddque_token', token);
+        localStorage.setItem('siddique_token', token);
         showChat();
     } catch (err) {
         authError.textContent = err.message;
@@ -52,7 +52,7 @@ loginBtn.addEventListener('click', async () => {
 });
 
 logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('siddque_token');
+    localStorage.removeItem('siddique_token');
     token = null;
     currentConversationId = null;
     chatScreen.classList.add('hidden');
@@ -209,6 +209,16 @@ function appendMessage(role, content) {
     messagesContainer.appendChild(div);
 }
 
+let isAutoScrolling = false;
 function scrollToBottom() {
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    if (!isAutoScrolling) {
+        isAutoScrolling = true;
+        requestAnimationFrame(() => {
+            messagesContainer.scrollTo({
+                top: messagesContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+            setTimeout(() => { isAutoScrolling = false; }, 100);
+        });
+    }
 }
