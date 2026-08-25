@@ -1,4 +1,5 @@
 import json
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -14,7 +15,7 @@ class ChatRequest(BaseModel):
     message: str
     conversation_id: int = None
 
-SIDDQUE_SYSTEM_INSTRUCTION = '''
+BASE_SYSTEM_INSTRUCTION = '''
 You are Siddique AI. 
 The owner/user is Siddique.
 Communication style: Direct, situational, action-oriented. Low tolerance for repetition and unnecessary explanations.
@@ -36,6 +37,15 @@ def get_or_create_conversation(db: Session, user_id: int, conv_id: int = None) -
     db.refresh(conv)
     return conv
 
+def get_dynamic_instruction():
+    instruction = BASE_SYSTEM_INSTRUCTION
+    if os.path.exists("user_memory.txt"):
+        with open("user_memory.txt", "r", encoding="utf-8") as f:
+            memories = f.read().strip()
+            if memories:
+                instruction += f"\n\nCORE MEMORIES (Always refer to these if relevant):\n{memories}"
+    return instruction
+
 @router.post("/stream")
 def chat_stream(request: ChatRequest, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not request.message.strip():
@@ -43,13 +53,10 @@ def chat_stream(request: ChatRequest, current_user: models.User = Depends(get_cu
         
     conv = get_or_create_conversation(db, current_user.id, request.conversation_id)
     
-    # 1. Grab recent history BEFORE saving the new message
-    # Limiting to last 10 messages (5 user/5 AI) for context to maintain speed/token limits
     db_messages = db.query(models.Message).filter(models.Message.conversation_id == conv.id).order_by(models.Message.created_at.asc()).all()
     recent_messages = db_messages[-10:]
     history_payload = [{"role": m.role, "content": m.content} for m in recent_messages]
 
-    # 2. Save user message
     user_msg = models.Message(conversation_id=conv.id, role="user", content=request.message)
     db.add(user_msg)
     db.commit()
@@ -62,10 +69,11 @@ def chat_stream(request: ChatRequest, current_user: models.User = Depends(get_cu
         full_response = ""
         yield f"data: {json.dumps({'conversation_id': conv.id})}\n\n"
         
-        # Inject history_payload into the LLM call
+        dynamic_instruction = get_dynamic_instruction()
+        
         for chunk in stream_response(
             prompt=request.message, 
-            system_instruction=SIDDQUE_SYSTEM_INSTRUCTION,
+            system_instruction=dynamic_instruction,
             history=history_payload
         ):
             yield chunk

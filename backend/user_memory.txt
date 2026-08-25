@@ -1,0 +1,2 @@
+- User's favorite programming language is Rust.
+- User's secret code name is NightHawk.
