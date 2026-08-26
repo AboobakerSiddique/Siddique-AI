@@ -1,5 +1,5 @@
 
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = 'https://siddique-ai-backend.onrender.com](https://siddique-ai-backend.onrender.com';
 let token = localStorage.getItem('siddique_token');
 let currentConversationId = null;
 
