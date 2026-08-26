@@ -1,5 +1,5 @@
 
-const API_URL = 'https://siddique-ai-backend.onrender.com](https://siddique-ai-backend.onrender.com';
+const API_URL = 'https://siddique-ai.onrender.com';
 let token = localStorage.getItem('siddique_token');
 let currentConversationId = null;
 
