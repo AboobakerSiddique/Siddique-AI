@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      # This pulls the API key from your local machine's environment variables
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./backend/user_memory.txt:/app/user_memory.txt
+      - ./backend/vector_db.json:/app/vector_db.json
+      - ./backend/siddique_ai.db:/app/siddique_ai.db
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - backend

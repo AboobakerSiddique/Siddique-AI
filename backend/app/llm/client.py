@@ -11,7 +11,7 @@ except Exception:
 
 MODEL_ID = "gemini-3.6-flash"
 
-def stream_response(prompt: str, system_instruction: str = None, history: list = None):
+def stream_response(prompt: str, system_instruction: str = None, history: list = None, image_bytes: bytes = None, image_mime_type: str = None):
     if not client:
         yield f"data: {json.dumps({'error': 'Gemini API Key is missing or invalid'})}\n\n"
         return
@@ -38,8 +38,13 @@ def stream_response(prompt: str, system_instruction: str = None, history: list =
     try:
         chat = client.chats.create(model=MODEL_ID, config=config, history=safe_history)
         
-        # Google SDK handles the back-and-forth execution of the tools automatically here
-        response_stream = chat.send_message_stream(prompt)
+        # Build the multimodal payload
+        message_parts = []
+        if image_bytes and image_mime_type:
+            message_parts.append(types.Part.from_bytes(data=image_bytes, mime_type=image_mime_type))
+        message_parts.append(types.Part.from_text(text=prompt))
+        
+        response_stream = chat.send_message_stream(message_parts)
         
         for chunk in response_stream:
             if chunk.text:

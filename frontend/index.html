@@ -11,7 +11,7 @@
     <div id="auth-screen" class="screen">
         <div class="auth-box">
             <h1 class="logo">Siddique <span>AI</span></h1>
-            <p>Authentication Required</p>
+            <p>System Authentication</p>
             <input type="email" id="email" placeholder="Email" autocomplete="off">
             <input type="password" id="password" placeholder="Password">
             <button id="login-btn">Initialize</button>
@@ -42,13 +42,31 @@
                 </div>
             </div>
             <div class="input-container">
-                <textarea id="chat-input" placeholder="Message Siddique AI... (Shift+Enter for newline)" rows="1"></textarea>
-                <button id="send-btn">Send</button>
+                <div class="input-wrapper" style="flex-direction: column;">
+                    
+                    <!-- Image Preview Box -->
+                    <div id="image-preview-container" class="hidden" style="position: relative; margin-bottom: 10px; width: fit-content;">
+                        <img id="image-preview" src="" style="max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <button id="remove-image-btn" style="position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; padding: 0; display: flex; justify-content: center; align-items: center;">×</button>
+                    </div>
+                    
+                    <!-- Input Row -->
+                    <div style="display: flex; gap: 12px; width: 100%; align-items: center;">
+                        <button id="upload-trigger-btn" style="width: auto; padding: 12px; border-radius: 50%; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer;" title="Attach Image">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        </button>
+                        <input type="file" id="image-upload" accept="image/png, image/jpeg, image/webp" class="hidden">
+                        
+                        <textarea id="chat-input" placeholder="Message Siddique AI... (Shift+Enter for newline)" rows="1" style="flex: 1;"></textarea>
+                        
+                        <button id="send-btn" style="width: auto; padding: 0 24px; border-radius: 24px;">Send</button>
+                    </div>
+
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- We'll use Marked.js to render Markdown easily -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="js/app.js"></script>
 </body>

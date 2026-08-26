@@ -91,3 +91,26 @@ textarea:focus { border-color: var(--maroon-primary); }
 
 .message a { color: var(--maroon-primary); text-decoration: none; border-bottom: 1px dashed var(--maroon-primary); transition: all 0.2s; }
 .message a:hover { color: #ff4d4d; border-bottom-style: solid; }
+
+/* --- Phase 13: Live Preview UI --- */
+.live-preview-box {
+    margin: 15px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-deep);
+}
+.preview-header {
+    background: #0c0c0c;
+    padding: 8px 15px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.preview-header span {
+    color: var(--maroon-primary);
+    font-weight: 600;
+}

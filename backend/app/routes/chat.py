@@ -1,5 +1,6 @@
 import json
 import os
+import base64
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -14,6 +15,8 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 class ChatRequest(BaseModel):
     message: str
     conversation_id: int = None
+    image_base64: str = None
+    image_mime_type: str = None
 
 BASE_SYSTEM_INSTRUCTION = '''
 You are Siddique AI. 
@@ -43,7 +46,7 @@ def get_dynamic_instruction():
         with open("user_memory.txt", "r", encoding="utf-8") as f:
             memories = f.read().strip()
             if memories:
-                instruction += f"\n\nCORE MEMORIES (Always refer to these if relevant):\n{memories}"
+                instruction += f"\n\nCORE MEMORIES:\n{memories}"
     return instruction
 
 @router.post("/stream")
@@ -54,16 +57,23 @@ def chat_stream(request: ChatRequest, current_user: models.User = Depends(get_cu
     conv = get_or_create_conversation(db, current_user.id, request.conversation_id)
     
     db_messages = db.query(models.Message).filter(models.Message.conversation_id == conv.id).order_by(models.Message.created_at.asc()).all()
-    recent_messages = db_messages[-10:]
-    history_payload = [{"role": m.role, "content": m.content} for m in recent_messages]
+    history_payload = [{"role": m.role, "content": m.content} for m in db_messages[-10:]]
 
-    user_msg = models.Message(conversation_id=conv.id, role="user", content=request.message)
-    db.add(user_msg)
+    # Save prompt to history (we don't save the image to DB to save space)
+    db.add(models.Message(conversation_id=conv.id, role="user", content=request.message))
     db.commit()
 
     if conv.title == "New Session":
         conv.title = request.message[:30] + ("..." if len(request.message) > 30 else "")
         db.commit()
+
+    # Decode image if present
+    img_bytes = None
+    if request.image_base64:
+        try:
+            img_bytes = base64.b64decode(request.image_base64)
+        except:
+            pass
 
     def stream_and_save():
         full_response = ""
@@ -74,7 +84,9 @@ def chat_stream(request: ChatRequest, current_user: models.User = Depends(get_cu
         for chunk in stream_response(
             prompt=request.message, 
             system_instruction=dynamic_instruction,
-            history=history_payload
+            history=history_payload,
+            image_bytes=img_bytes,
+            image_mime_type=request.image_mime_type
         ):
             yield chunk
             if chunk.startswith("data: ") and "[DONE]" not in chunk:
@@ -84,8 +96,7 @@ def chat_stream(request: ChatRequest, current_user: models.User = Depends(get_cu
                         full_response += data["text"]
                 except: pass
                 
-        ai_msg = models.Message(conversation_id=conv.id, role="assistant", content=full_response)
-        db.add(ai_msg)
+        db.add(models.Message(conversation_id=conv.id, role="assistant", content=full_response))
         db.commit()
 
     return StreamingResponse(stream_and_save(), media_type="text/event-stream")
