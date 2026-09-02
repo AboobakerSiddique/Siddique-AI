@@ -145,9 +145,9 @@ async function sendMessage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                conversation_id: currentConversationId,
+                ...(currentConversationId !== null && { conversation_id: currentConversationId }),
                 message: text,
-                image_base64: currentImage
+                ...(currentImage && { image_base64: currentImage })
             })
         });
 
