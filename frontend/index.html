@@ -5,46 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Siddique AI</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- Google Fonts for that sleek dev look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Minimal Top Navbar -->
-    <nav class="navbar">
-        <div class="logo"><span>>_</span> siddique-ai</div>
-        <div class="nav-links">
-            <a href="#" id="new-chat-btn">New Chat</a>
-            <a href="#" id="history-toggle">History</a>
-        </div>
-    </nav>
-
-    <!-- Hidden Sidebar for History (toggled via JS) -->
-    <aside class="sidebar" id="sidebar">
-        <div class="history-list" id="history-list"></div>
-    </aside>
-
-    <main class="main-content">
-        <!-- Center Hero (Disappears when chatting) -->
-        <div class="hero-section" id="hero-section">
-            <h1>Understand what your code<br>is really doing.</h1>
-            <p>Analyze architecture, debug hardware, and generate components — all in one place.</p>
-        </div>
-
-        <!-- Chat Area -->
-        <div class="chat-container" id="chat-container"></div>
-
-        <!-- Floating Input Area -->
-        <div class="input-wrapper">
-            <div class="input-box">
-                <span class="attachment-icon" id="attach-btn" title="Attach Image">📎</span>
-                <textarea id="message-input" placeholder="Message Siddique AI..." rows="1"></textarea>
-                <button id="send-btn">Analyze ➔</button>
+    <div class="app-layout">
+        <!-- Sleek Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">>_ siddique-ai</span>
+                <button id="new-chat-btn" class="icon-btn">＋</button>
             </div>
-            <div class="input-footer">
-                <span class="status-dot"></span> API online – v1.0.0
+            <div class="history-list" id="history-list"></div>
+            <div class="sidebar-footer">
+                <span class="status-dot"></span> System Online
             </div>
-        </div>
-    </main>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="main-content">
+            <!-- Custom Hero Section -->
+            <div class="hero-section" id="hero-section">
+                <h1>Initialize workspace.</h1>
+                <p>Hardware bridge, RAG memory, and live UI rendering active.</p>
+                <div class="hero-suggestions">
+                    <span>Try:</span>
+                    <code>ping local hardware</code>
+                    <code>render mobile checkout</code>
+                </div>
+            </div>
+
+            <div class="chat-container" id="chat-container"></div>
+
+            <!-- Floating Input -->
+            <div class="input-wrapper">
+                <div class="input-box">
+                    <span class="attachment-icon" id="attach-btn" title="Attach Image">📎</span>
+                    <textarea id="message-input" placeholder="Send a message..." rows="1"></textarea>
+                    <button id="send-btn" class="send-action">↑</button>
+                </div>
+            </div>
+        </main>
+    </div>
 
     <input type="file" id="file-input" style="display: none;" accept="image/*">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
