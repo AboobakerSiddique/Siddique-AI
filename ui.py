@@ -1,40 +1,267 @@
 import os
+import re
 
 js_path = "frontend/js/app.js"
 
+# 1. Recover your live Render API_URL
+api_url = "https://siddique-ai.onrender.com"
 if os.path.exists(js_path):
     with open(js_path, "r", encoding="utf-8") as f:
-        js = f.read()
+        old_js = f.read()
+        match = re.search(r"const\s+API_URL\s*=\s*['\"]([^'\"]+)['\"]", old_js)
+        if match:
+            api_url = match.group(1)
 
-    # Find the payload creation block
-    old_payload = """body: JSON.stringify({
-                conversation_id: currentConversationId,
-                message: text,
-                image_base64: currentImage
-            })"""
+# 2. The perfect app.js
+pristine_js = f"""const API_URL = '{api_url}';
+let currentConversationId = null;
+let base64Image = null;
+let token = localStorage.getItem('siddique_token');
+
+// --- DOM Elements ---
+const historyList = document.getElementById('history-list');
+const chatContainer = document.getElementById('chat-container');
+const messageInput = document.getElementById('message-input');
+const sendBtn = document.getElementById('send-btn');
+const newChatBtn = document.getElementById('new-chat-btn');
+const attachBtn = document.getElementById('attach-btn');
+const fileInput = document.getElementById('file-input');
+const heroSection = document.getElementById('hero-section');
+const disconnectBtn = document.querySelector('.disconnect-btn');
+
+// --- Auth Overlay & Fetch Interceptor ---
+const loginOverlay = document.getElementById('login-overlay');
+const loginBtn = document.getElementById('login-btn');
+
+function checkAuth() {{
+    if (!token) {{
+        if (loginOverlay) loginOverlay.style.display = 'flex';
+    }} else {{
+        if (loginOverlay) loginOverlay.style.display = 'none';
+        loadConversations();
+    }}
+}}
+
+if (loginBtn) {{
+    loginBtn.addEventListener('click', async () => {{
+        const u = document.getElementById('login-username').value;
+        const p = document.getElementById('login-password').value;
+        try {{
+            const res = await fetch(`${{API_URL}}/auth/login`, {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/x-www-form-urlencoded' }},
+                body: new URLSearchParams({{ username: u, password: p }})
+            }});
+            if (res.ok) {{
+                const data = await res.json();
+                token = data.access_token;
+                localStorage.setItem('siddique_token', token);
+                checkAuth();
+            }} else {{
+                document.getElementById('login-error').style.display = 'block';
+            }}
+        }} catch (e) {{
+            document.getElementById('login-error').textContent = 'Network error.';
+            document.getElementById('login-error').style.display = 'block';
+        }}
+    }});
+}}
+
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {{
+    let [resource, config] = args;
+    if (!config) config = {{}};
+    if (!config.headers) config.headers = {{}};
+    
+    if (token && typeof resource === 'string' && !resource.includes('/auth/login')) {{
+        config.headers['Authorization'] = `Bearer ${{token}}`;
+    }}
+    
+    const response = await originalFetch(resource, config);
+    if (response.status === 401) {{
+        localStorage.removeItem('siddique_token');
+        token = null;
+        checkAuth();
+    }}
+    return response;
+}};
+
+// --- Disconnect Logic ---
+if (disconnectBtn) {{
+    disconnectBtn.addEventListener('click', () => {{
+        localStorage.removeItem('siddique_token');
+        token = null;
+        chatContainer.innerHTML = '';
+        currentConversationId = null;
+        if (heroSection) heroSection.style.display = 'block';
+        checkAuth();
+    }});
+}}
+
+// --- UI Helpers ---
+function scrollToBottom() {{
+    chatContainer.scrollTo({{ top: chatContainer.scrollHeight, behavior: 'smooth' }});
+}}
+
+function hideHero() {{
+    if (heroSection) heroSection.style.display = 'none';
+}}
+
+// --- Core API Logic ---
+async function loadConversations() {{
+    try {{
+        const res = await fetch(`${{API_URL}}/conversations`);
+        if (!res.ok) return;
+        const data = await res.json();
+        historyList.innerHTML = '';
+        data.forEach(conv => {{
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.textContent = conv.title || 'New Chat';
+            div.onclick = () => loadConversation(conv.id);
+            if (conv.id === currentConversationId) div.classList.add('active');
+            historyList.appendChild(div);
+        }});
+    }} catch (e) {{
+        console.error("History fetch error:", e);
+    }}
+}}
+
+async function loadConversation(id) {{
+    currentConversationId = parseInt(id);
+    hideHero();
+    try {{
+        const res = await fetch(`${{API_URL}}/conversations/${{id}}`);
+        const data = await res.json();
+        chatContainer.innerHTML = '';
+        data.messages.forEach(msg => {{
+            const div = document.createElement('div');
+            div.className = `message ${{msg.role === 'user' ? 'user-msg' : 'ai-msg'}}`;
+            div.innerHTML = msg.role === 'user' ? msg.content : marked.parse(msg.content);
+            chatContainer.appendChild(div);
+        }});
+        loadConversations();
+        scrollToBottom();
+    }} catch (e) {{
+        console.error("Failed to load conversation history.");
+    }}
+}}
+
+async function sendMessage() {{
+    const text = messageInput.value.trim();
+    if (!text && !base64Image) return;
+
+    hideHero();
+    
+    const userDiv = document.createElement('div');
+    userDiv.className = 'message user-msg';
+    userDiv.textContent = text + (base64Image ? " [Image Attached]" : "");
+    chatContainer.appendChild(userDiv);
+    
+    messageInput.value = '';
+    messageInput.style.height = 'auto'; 
+    let currentImage = base64Image;
+    base64Image = null;
+    attachBtn.style.color = 'var(--text-muted)';
+    scrollToBottom();
+
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'message ai-msg';
+    chatContainer.appendChild(aiDiv);
+
+    // FIXED PAYLOAD: Explicitly handles nulls and forces integers to prevent 422 Unprocessable Content
+    const requestPayload = {{
+        message: text,
+        conversation_id: currentConversationId ? parseInt(currentConversationId) : null,
+        image_base64: currentImage || null
+    }};
+
+    try {{
+        const res = await fetch(`${{API_URL}}/chat/stream`, {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify(requestPayload)
+        }});
+
+        if (!res.ok) throw new Error("Network response was not ok");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = "";
+
+        while (true) {{
+            const {{ done, value }} = await reader.read();
+            if (done) break;
             
-    new_payload = """body: JSON.stringify({
-                ...(currentConversationId !== null && { conversation_id: currentConversationId }),
-                message: text,
-                ...(currentImage && { image_base64: currentImage })
-            })"""
+            const chunk = decoder.decode(value, {{ stream: true }});
+            const lines = chunk.split('\\n\\n');
+            
+            for (const line of lines) {{
+                if (line.startsWith('data: ')) {{
+                    const dataStr = line.replace('data: ', '');
+                    if (dataStr.trim() === '[DONE]') {{
+                        loadConversations();
+                        break;
+                    }}
+                    try {{
+                        const parsed = JSON.parse(dataStr);
+                        if (parsed.content) {{
+                            fullText += parsed.content;
+                            aiDiv.innerHTML = marked.parse(fullText);
+                            scrollToBottom();
+                        }}
+                        if (parsed.conversation_id) {{
+                            currentConversationId = parseInt(parsed.conversation_id);
+                        }}
+                    }} catch (e) {{}}
+                }}
+            }}
+        }}
+    }} catch (e) {{
+        aiDiv.innerHTML = "<em>Error connecting to API.</em>";
+    }}
+}}
 
-    if old_payload in js:
-        js = js.replace(old_payload, new_payload)
-        with open(js_path, "w", encoding="utf-8") as f:
-            f.write(js)
-        print("✅ Fixed payload to prevent 422 validation errors.")
-    else:
-        print("Payload structure slightly different, trying alternative replacement.")
-        # Alternative replacement if whitespace is different
-        import re
-        js = re.sub(
-            r'body:\s*JSON\.stringify\(\{\s*conversation_id:\s*currentConversationId,\s*message:\s*text,\s*image_base64:\s*currentImage\s*\}\)',
-            new_payload,
-            js
-        )
-        with open(js_path, "w", encoding="utf-8") as f:
-            f.write(js)
-        print("✅ Applied regex fix for payload.")
-else:
-    print(f"Error: Could not find {js_path}")
+// --- Event Listeners ---
+sendBtn.addEventListener('click', sendMessage);
+
+messageInput.addEventListener('keydown', (e) => {{
+    if (e.key === 'Enter' && !e.shiftKey) {{
+        e.preventDefault();
+        sendMessage();
+    }}
+}});
+
+messageInput.addEventListener('input', function() {{
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+}});
+
+newChatBtn.addEventListener('click', () => {{
+    currentConversationId = null;
+    chatContainer.innerHTML = '';
+    if (heroSection) heroSection.style.display = 'block';
+    loadConversations();
+}});
+
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {{
+    const file = e.target.files[0];
+    if (file) {{
+        const reader = new FileReader();
+        reader.onload = (evt) => {{
+            base64Image = evt.target.result.split(',')[1];
+            attachBtn.style.color = 'var(--maroon-primary)';
+        }};
+        reader.readAsDataURL(file);
+    }}
+}});
+
+// Boot up
+checkAuth();
+"""
+
+with open(js_path, "w", encoding="utf-8") as f:
+    f.write(pristine_js)
+
+print("✅ Payload sanitized. Disconnect button wired. Ready for deployment.")
