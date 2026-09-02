@@ -111,7 +111,7 @@ async function loadConversation(id) {
             chatContainer.appendChild(div);
             if(msg.role === 'assistant') renderUIComponents(div);
         });
-        loadConversations();
+        
         scrollToBottom();
     } catch (e) {
         showNotification("Failed to load conversation history.");
@@ -169,7 +169,7 @@ async function sendMessage() {
                     const dataStr = line.replace('data: ', '');
                     if (dataStr.trim() === '[DONE]') {
                         renderUIComponents(aiDiv);
-                        loadConversations();
+                        
                         break;
                     }
                     try {
@@ -216,7 +216,7 @@ newChatBtn.addEventListener('click', () => {
     currentConversationId = null;
     chatContainer.innerHTML = '';
     if (heroSection) heroSection.style.display = 'block';
-    loadConversations();
+    
 });
 
 attachBtn.addEventListener('click', () => fileInput.click());
@@ -234,4 +234,68 @@ fileInput.addEventListener('change', (e) => {
 });
 
 // Initialize
-loadConversations();
+
+
+// --- Authentication ---
+const loginOverlay = document.getElementById('login-overlay');
+const loginBtn = document.getElementById('login-btn');
+let token = localStorage.getItem('siddique_token');
+
+function checkAuth() {
+    if (!token) {
+        loginOverlay.style.display = 'flex';
+    } else {
+        loginOverlay.style.display = 'none';
+        loadConversations();
+    }
+}
+
+if (loginBtn) {
+    loginBtn.addEventListener('click', async () => {
+        const u = document.getElementById('login-username').value;
+        const p = document.getElementById('login-password').value;
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ username: u, password: p })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                token = data.access_token;
+                localStorage.setItem('siddique_token', token);
+                checkAuth();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        } catch (e) {
+            document.getElementById('login-error').textContent = 'Network error.';
+            document.getElementById('login-error').style.display = 'block';
+        }
+    });
+}
+
+// Modify fetch calls to include the token
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+    let [resource, config] = args;
+    if (!config) config = {};
+    if (!config.headers) config.headers = {};
+    
+    // Don't add token to the login route itself
+    if (token && !resource.includes('/auth/login')) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await originalFetch(resource, config);
+    if (response.status === 401) {
+        localStorage.removeItem('siddique_token');
+        token = null;
+        checkAuth();
+    }
+    return response;
+};
+
+// Replace the old initialize call at the bottom
+
+checkAuth();
