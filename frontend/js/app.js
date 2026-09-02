@@ -3,7 +3,7 @@ let currentConversationId = null;
 let base64Image = null;
 let token = localStorage.getItem('siddique_token');
 
-// --- DOM Elements ---
+// DOM Elements
 const historyList = document.getElementById('history-list');
 const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message-input');
@@ -14,7 +14,7 @@ const fileInput = document.getElementById('file-input');
 const heroSection = document.getElementById('hero-section');
 const disconnectBtn = document.querySelector('.disconnect-btn');
 
-// --- Auth Overlay & Fetch Interceptor ---
+// Auth Overlay
 const loginOverlay = document.getElementById('login-overlay');
 const loginBtn = document.getElementById('login-btn');
 
@@ -52,6 +52,7 @@ if (loginBtn) {
     });
 }
 
+// Fetch Interceptor
 const originalFetch = window.fetch;
 window.fetch = async (...args) => {
     let [resource, config] = args;
@@ -71,7 +72,7 @@ window.fetch = async (...args) => {
     return response;
 };
 
-// --- Disconnect Logic ---
+// Disconnect Button
 if (disconnectBtn) {
     disconnectBtn.addEventListener('click', () => {
         localStorage.removeItem('siddique_token');
@@ -83,16 +84,15 @@ if (disconnectBtn) {
     });
 }
 
-// --- UI Helpers ---
+// UI Helpers
 function scrollToBottom() {
     chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
 }
-
 function hideHero() {
     if (heroSection) heroSection.style.display = 'none';
 }
 
-// --- Core API Logic ---
+// API Logic
 async function loadConversations() {
     try {
         const res = await fetch(`${API_URL}/conversations`);
@@ -154,12 +154,16 @@ async function sendMessage() {
     aiDiv.className = 'message ai-msg';
     chatContainer.appendChild(aiDiv);
 
-    // FIXED PAYLOAD: Explicitly handles nulls and forces integers to prevent 422 Unprocessable Content
+    // FIX FOR 422 ERROR: Only add keys if they have valid data, NEVER send null!
     const requestPayload = {
-        message: text,
-        conversation_id: currentConversationId ? parseInt(currentConversationId) : null,
-        image_base64: currentImage || null
+        message: text
     };
+    if (currentConversationId) {
+        requestPayload.conversation_id = parseInt(currentConversationId);
+    }
+    if (currentImage) {
+        requestPayload.image_base64 = currentImage;
+    }
 
     try {
         const res = await fetch(`${API_URL}/chat/stream`, {
@@ -207,40 +211,48 @@ async function sendMessage() {
     }
 }
 
-// --- Event Listeners ---
-sendBtn.addEventListener('click', sendMessage);
+// Event Listeners
+if(sendBtn) sendBtn.addEventListener('click', sendMessage);
 
-messageInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
-});
+if(messageInput) {
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
 
-messageInput.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = (this.scrollHeight) + 'px';
-});
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+}
 
-newChatBtn.addEventListener('click', () => {
-    currentConversationId = null;
-    chatContainer.innerHTML = '';
-    if (heroSection) heroSection.style.display = 'block';
-    loadConversations();
-});
+if(newChatBtn) {
+    newChatBtn.addEventListener('click', () => {
+        currentConversationId = null;
+        chatContainer.innerHTML = '';
+        if (heroSection) heroSection.style.display = 'block';
+        loadConversations();
+    });
+}
 
-attachBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            base64Image = evt.target.result.split(',')[1];
-            attachBtn.style.color = 'var(--maroon-primary)';
-        };
-        reader.readAsDataURL(file);
-    }
-});
+if(attachBtn) {
+    attachBtn.addEventListener('click', () => fileInput.click());
+}
+if(fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                base64Image = evt.target.result.split(',')[1];
+                attachBtn.style.color = 'var(--maroon-primary)';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
 
 // Boot up
 checkAuth();

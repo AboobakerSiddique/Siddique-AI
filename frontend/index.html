@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Siddique AI</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=1788342154">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Login Overlay -->
     <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-deep); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center;">
         <h1 style="font-size: 32px; font-weight: 500; margin-bottom: 20px;">Siddique <span class="accent">AI</span></h1>
         <div style="background: var(--bg-surface); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); width: 300px; display: flex; flex-direction: column; gap: 15px;">
@@ -19,7 +20,6 @@
     </div>
 
     <div class="app-layout">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <span class="logo">Siddique <span class="accent">AI</span></span>
@@ -33,18 +33,14 @@
             </div>
         </aside>
 
-        <!-- Main Chat Area -->
         <main class="main-content">
-            <!-- Centered Hero -->
             <div class="hero-section" id="hero-section">
                 <h1>Siddique <span class="accent">AI</span></h1>
                 <p>System ready. What are we building?</p>
             </div>
 
-            <!-- Chat Output -->
             <div class="chat-container" id="chat-container"></div>
 
-            <!-- Input Area matches Past UI image perfectly -->
             <div class="input-wrapper">
                 <button class="attach-btn" id="attach-btn" title="Attach Image">📎</button>
                 <div class="input-box">
@@ -58,6 +54,6 @@
 
     <input type="file" id="file-input" style="display: none;" accept="image/*">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=1788342154"></script>
 </body>
 </html>
