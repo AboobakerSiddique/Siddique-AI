@@ -90,6 +90,7 @@ async function loadConversations() {
 }
 
 async function loadConversation(id) {
+    document.getElementById('hero-section').style.display = 'none';
     currentConversationId = id;
     try {
         const res = await fetch(`${API_URL}/conversations/${id}`, {
@@ -132,6 +133,7 @@ chatInput.addEventListener('keydown', (e) => {
 sendBtn.addEventListener('click', sendMessage);
 
 async function sendMessage() {
+    document.getElementById('hero-section').style.display = 'none';
     const text = chatInput.value.trim();
     if (!text) return;
     
@@ -339,4 +341,15 @@ function showNotification(message, duration = 4000) {
         toast.style.transform = 'translateY(-20px)';
         setTimeout(() => toast.remove(), 300);
     }, duration);
+}
+
+
+// Sidebar toggle logic
+const historyToggle = document.getElementById('history-toggle');
+const sidebar = document.getElementById('sidebar');
+if(historyToggle && sidebar) {
+    historyToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        sidebar.classList.toggle('active');
+    });
 }

@@ -5,68 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Siddique AI</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- Google Fonts for that sleek dev look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="screen">
-        <div class="auth-box">
-            <h1 class="logo">Siddique <span>AI</span></h1>
-            <p>System Authentication</p>
-            <input type="email" id="email" placeholder="Email" autocomplete="off">
-            <input type="password" id="password" placeholder="Password">
-            <button id="login-btn">Initialize</button>
-            <p id="auth-error" class="error"></p>
+    <!-- Minimal Top Navbar -->
+    <nav class="navbar">
+        <div class="logo"><span>>_</span> siddique-ai</div>
+        <div class="nav-links">
+            <a href="#" id="new-chat-btn">New Chat</a>
+            <a href="#" id="history-toggle">History</a>
         </div>
-    </div>
+    </nav>
 
-    <!-- Main Chat Screen -->
-    <div id="chat-screen" class="screen hidden">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2 class="logo-small">Siddique <span>AI</span></h2>
-            </div>
-            <button class="new-chat-btn">+ New Chat</button>
-            <div class="conversation-list">
-                <div class="conv-item active">Current Session</div>
-            </div>
-            <div class="sidebar-footer">
-                <button id="logout-btn">Disconnect</button>
-            </div>
-        </aside>
-        
-        <main class="chat-area">
-            <div id="messages-container" class="messages-container">
-                <div class="empty-state">
-                    <h1 class="logo-large">Siddique <span>AI</span></h1>
-                    <p>System ready. What are we building?</p>
-                </div>
-            </div>
-            <div class="input-container">
-                <div class="input-wrapper" style="flex-direction: column;">
-                    
-                    <!-- Image Preview Box -->
-                    <div id="image-preview-container" class="hidden" style="position: relative; margin-bottom: 10px; width: fit-content;">
-                        <img id="image-preview" src="" style="max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <button id="remove-image-btn" style="position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; padding: 0; display: flex; justify-content: center; align-items: center;">×</button>
-                    </div>
-                    
-                    <!-- Input Row -->
-                    <div style="display: flex; gap: 12px; width: 100%; align-items: center;">
-                        <button id="upload-trigger-btn" style="width: auto; padding: 12px; border-radius: 50%; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer;" title="Attach Image">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                        </button>
-                        <input type="file" id="image-upload" accept="image/png, image/jpeg, image/webp" class="hidden">
-                        
-                        <textarea id="chat-input" placeholder="Message Siddique AI... (Shift+Enter for newline)" rows="1" style="flex: 1;"></textarea>
-                        
-                        <button id="send-btn" style="width: auto; padding: 0 24px; border-radius: 24px;">Send</button>
-                    </div>
+    <!-- Hidden Sidebar for History (toggled via JS) -->
+    <aside class="sidebar" id="sidebar">
+        <div class="history-list" id="history-list"></div>
+    </aside>
 
-                </div>
-            </div>
-        </main>
-    </div>
+    <main class="main-content">
+        <!-- Center Hero (Disappears when chatting) -->
+        <div class="hero-section" id="hero-section">
+            <h1>Understand what your code<br>is really doing.</h1>
+            <p>Analyze architecture, debug hardware, and generate components — all in one place.</p>
+        </div>
 
+        <!-- Chat Area -->
+        <div class="chat-container" id="chat-container"></div>
+
+        <!-- Floating Input Area -->
+        <div class="input-wrapper">
+            <div class="input-box">
+                <span class="attachment-icon" id="attach-btn" title="Attach Image">📎</span>
+                <textarea id="message-input" placeholder="Message Siddique AI..." rows="1"></textarea>
+                <button id="send-btn">Analyze ➔</button>
+            </div>
+            <div class="input-footer">
+                <span class="status-dot"></span> API online – v1.0.0
+            </div>
+        </div>
+    </main>
+
+    <input type="file" id="file-input" style="display: none;" accept="image/*">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="js/app.js"></script>
 </body>

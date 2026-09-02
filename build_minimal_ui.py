@@ -1,4 +1,67 @@
+import os
 
+# --- 1. OVERWRITE HTML FOR MINIMAL LAYOUT ---
+html_path = "frontend/index.html"
+with open(html_path, "w", encoding="utf-8") as f:
+    f.write("""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siddique AI</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Google Fonts for that sleek dev look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Minimal Top Navbar -->
+    <nav class="navbar">
+        <div class="logo"><span>>_</span> siddique-ai</div>
+        <div class="nav-links">
+            <a href="#" id="new-chat-btn">New Chat</a>
+            <a href="#" id="history-toggle">History</a>
+        </div>
+    </nav>
+
+    <!-- Hidden Sidebar for History (toggled via JS) -->
+    <aside class="sidebar" id="sidebar">
+        <div class="history-list" id="history-list"></div>
+    </aside>
+
+    <main class="main-content">
+        <!-- Center Hero (Disappears when chatting) -->
+        <div class="hero-section" id="hero-section">
+            <h1>Understand what your code<br>is really doing.</h1>
+            <p>Analyze architecture, debug hardware, and generate components — all in one place.</p>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-container" id="chat-container"></div>
+
+        <!-- Floating Input Area -->
+        <div class="input-wrapper">
+            <div class="input-box">
+                <span class="attachment-icon" id="attach-btn" title="Attach Image">📎</span>
+                <textarea id="message-input" placeholder="Message Siddique AI..." rows="1"></textarea>
+                <button id="send-btn">Analyze ➔</button>
+            </div>
+            <div class="input-footer">
+                <span class="status-dot"></span> API online – v1.0.0
+            </div>
+        </div>
+    </main>
+
+    <input type="file" id="file-input" style="display: none;" accept="image/*">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+""")
+
+# --- 2. OVERWRITE CSS FOR THE NEW VIBE ---
+css_path = "frontend/css/style.css"
+with open(css_path, "w", encoding="utf-8") as f:
+    f.write("""
 /* --- Minimal Dark Theme --- */
 :root {
     --bg-deep: #09090b;       /* Nearly black */
@@ -211,3 +274,42 @@ textarea::placeholder {
     background-color: #22c55e;
     border-radius: 50%;
 }
+""")
+
+# --- 3. PATCH JS TO HIDE HERO & TOGGLE SIDEBAR ---
+js_path = "frontend/js/app.js"
+with open(js_path, "r", encoding="utf-8") as f:
+    js_code = f.read()
+
+# Add logic to hide the hero section when the first message is sent/loaded
+if "document.getElementById('hero-section').style.display = 'none';" not in js_code:
+    # Inject it right into the sendMessage function
+    js_code = js_code.replace(
+        "async function sendMessage() {",
+        "async function sendMessage() {\n    document.getElementById('hero-section').style.display = 'none';"
+    )
+    # Inject it into loadConversation
+    js_code = js_code.replace(
+        "async function loadConversation(id) {",
+        "async function loadConversation(id) {\n    document.getElementById('hero-section').style.display = 'none';"
+    )
+
+# Add event listener for the new History toggle button
+history_toggle_logic = """
+// Sidebar toggle logic
+const historyToggle = document.getElementById('history-toggle');
+const sidebar = document.getElementById('sidebar');
+if(historyToggle && sidebar) {
+    historyToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        sidebar.classList.toggle('active');
+    });
+}
+"""
+if "historyToggle.addEventListener" not in js_code:
+    js_code += "\n" + history_toggle_logic
+
+with open(js_path, "w", encoding="utf-8") as f:
+    f.write(js_code)
+
+print("✅ UI overhauled to Minimal Terminal style.")
