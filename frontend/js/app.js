@@ -1,312 +1,27 @@
-
 const API_URL = 'https://siddique-ai.onrender.com';
-let token = localStorage.getItem('siddique_token');
 let currentConversationId = null;
+let base64Image = null;
 
-// DOM Elements
-const authScreen = document.getElementById('auth-screen');
-const chatScreen = document.getElementById('chat-screen');
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
-const loginBtn = document.getElementById('login-btn');
-const logoutBtn = document.getElementById('logout-btn');
-const authError = document.getElementById('auth-error');
-const chatInput = document.getElementById('chat-input');
+// --- DOM Elements ---
+const historyList = document.getElementById('history-list');
+const chatContainer = document.getElementById('chat-container');
+const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
-const messagesContainer = document.getElementById('messages-container');
-const emptyState = document.querySelector('.empty-state');
-const conversationList = document.querySelector('.conversation-list');
-const newChatBtn = document.querySelector('.new-chat-btn');
+const newChatBtn = document.getElementById('new-chat-btn');
+const attachBtn = document.getElementById('attach-btn');
+const fileInput = document.getElementById('file-input');
+const heroSection = document.getElementById('hero-section');
 
-// Initialization
-if (token) {
-    showChat();
-}
-
-// Authentication
-loginBtn.addEventListener('click', async () => {
-    const username = emailInput.value;
-    const password = passwordInput.value;
-    authError.textContent = '';
-
-    try {
-        const formData = new URLSearchParams();
-        formData.append('username', username);
-        formData.append('password', password);
-
-        const res = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData
-        });
-
-        if (!res.ok) throw new Error('Invalid credentials');
-        
-        const data = await res.json();
-        token = data.access_token;
-        localStorage.setItem('siddique_token', token);
-        showChat();
-    } catch (err) {
-        authError.textContent = err.message;
-    }
-});
-
-logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('siddique_token');
-    token = null;
-    currentConversationId = null;
-    chatScreen.classList.add('hidden');
-    authScreen.classList.remove('hidden');
-    emailInput.value = '';
-    passwordInput.value = '';
-});
-
-function showChat() {
-    authScreen.classList.add('hidden');
-    chatScreen.classList.remove('hidden');
-    loadConversations();
-    chatInput.focus();
-}
-
-// --- CONVERSATION LOGIC ---
-
-async function loadConversations() {
-    try {
-        const res = await fetch(`${API_URL}/conversations`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.status === 401) return logoutBtn.click();
-        const convos = await res.json();
-        
-        conversationList.innerHTML = '';
-        convos.forEach(c => {
-            const div = document.createElement('div');
-            div.className = `conv-item ${c.id === currentConversationId ? 'active' : ''}`;
-            div.textContent = c.title;
-            div.onclick = () => loadConversation(c.id);
-            conversationList.appendChild(div);
-        });
-    } catch(e) { console.error('Error loading conversations:', e); }
-}
-
-async function loadConversation(id) {
-    document.getElementById('hero-section').style.display = 'none';
-    currentConversationId = id;
-    try {
-        const res = await fetch(`${API_URL}/conversations/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.status === 401) return logoutBtn.click();
-        const conv = await res.json();
-        
-        // Clear screen and hide empty state
-        Array.from(messagesContainer.children).forEach(child => {
-            if (child !== emptyState) child.remove();
-        });
-        emptyState.style.display = 'none';
-        
-        conv.messages.forEach(m => appendMessage(m.role, m.content));
-        loadConversations(); // Re-render to update the active highlight
-        scrollToBottom();
-    } catch(e) { console.error('Error loading conversation:', e); }
-}
-
-newChatBtn.addEventListener('click', () => {
-    currentConversationId = null;
-    Array.from(messagesContainer.children).forEach(child => {
-        if (child !== emptyState) child.remove();
-    });
-    emptyState.style.display = 'block';
-    loadConversations(); // Removes active highlight
-    chatInput.focus();
-});
-
-// --- MESSAGING LOGIC ---
-
-chatInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
-});
-
-sendBtn.addEventListener('click', sendMessage);
-
-async function sendMessage() {
-    document.getElementById('hero-section').style.display = 'none';
-    const text = chatInput.value.trim();
-    if (!text) return;
-    
-    emptyState.style.display = 'none';
-
-    appendMessage('user', text);
-    chatInput.value = '';
-    
-    const assistantDiv = document.createElement('div');
-    assistantDiv.className = 'message assistant';
-    messagesContainer.appendChild(assistantDiv);
-    scrollToBottom();
-
-    const payload = { message: text };
-    if (currentImageBase64) {
-        payload.image_base64 = currentImageBase64;
-        payload.image_mime_type = currentImageMimeType;
-        removeImageBtn.click(); // Clear image after sending
-    }
-    if (currentConversationId) {
-        payload.conversation_id = currentConversationId;
-    }
-
-    try {
-        const res = await fetch(`${API_URL}/chat/stream`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (res.status === 401) return logoutBtn.click();
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let fullResponse = '';
-        let isFirstMessage = (currentConversationId === null);
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
-            
-            for (let line of lines) {
-                if (line.startsWith('data: ')) {
-                    const dataStr = line.substring(6);
-                    if (dataStr.trim() === '[DONE]') { renderUIComponents(assistantDiv); break; }
-                    
-                    try {
-                        const parsed = JSON.parse(dataStr);
-                        // Backend sends conversation_id at the start of the stream
-                        if (parsed.conversation_id) {
-                            currentConversationId = parsed.conversation_id;
-                            if (isFirstMessage) loadConversations(); // Refresh sidebar to show new title
-                        }
-                        
-                        if (parsed.error) { assistantDiv.remove(); showNotification(parsed.error); break; }
-                        if (parsed.text) {
-                            fullResponse += parsed.text;
-                            assistantDiv.innerHTML = marked.parse(fullResponse);
-                            scrollToBottom();
-                        }
-                    } catch (e) { }
-                }
-            }
-        }
-    } catch (err) {
-        assistantDiv.remove(); showNotification("Error connecting to Siddique AI. Please check your network.");
-    }
-}
-
-function appendMessage(role, content) {
-    const div = document.createElement('div');
-    div.className = `message ${role}`;
-    div.innerHTML = role === 'user' ? content.replace(/\n/g, '<br>') : marked.parse(content);
-    messagesContainer.appendChild(div);
-}
-
-let isAutoScrolling = false;
+// --- UI Helpers ---
 function scrollToBottom() {
-    if (!isAutoScrolling) {
-        isAutoScrolling = true;
-        requestAnimationFrame(() => {
-            messagesContainer.scrollTo({
-                top: messagesContainer.scrollHeight,
-                behavior: 'smooth'
-            });
-            setTimeout(() => { isAutoScrolling = false; }, 100);
-        });
-    }
+    chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
 }
 
-// --- Phase 11: Vision UI Logic ---
-const uploadTriggerBtn = document.getElementById('upload-trigger-btn');
-const imageUpload = document.getElementById('image-upload');
-const imagePreviewContainer = document.getElementById('image-preview-container');
-const imagePreview = document.getElementById('image-preview');
-const removeImageBtn = document.getElementById('remove-image-btn');
-
-let currentImageBase64 = null;
-let currentImageMimeType = null;
-
-if(uploadTriggerBtn) {
-    uploadTriggerBtn.addEventListener('click', () => imageUpload.click());
-
-    imageUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            // Display preview
-            imagePreview.src = event.target.result;
-            imagePreviewContainer.classList.remove('hidden');
-            
-            // Extract base64 and mime type
-            const base64String = event.target.result.split(',')[1];
-            currentImageBase64 = base64String;
-            currentImageMimeType = file.type;
-        };
-        reader.readAsDataURL(file);
-    });
-
-    removeImageBtn.addEventListener('click', () => {
-        imageUpload.value = '';
-        currentImageBase64 = null;
-        currentImageMimeType = null;
-        imagePreviewContainer.classList.add('hidden');
-        imagePreview.src = '';
-    });
+function hideHero() {
+    if (heroSection) heroSection.style.display = 'none';
 }
 
-// --- Phase 13: Live UI Component Renderer ---
-function renderUIComponents(container) {
-    // Find all HTML code blocks generated by marked.js
-    const htmlBlocks = container.querySelectorAll('pre code.language-html');
-    
-    htmlBlocks.forEach(block => {
-        const code = block.textContent;
-        
-        // Create the preview container
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'live-preview-box';
-        previewDiv.innerHTML = `<div class="preview-header"><span>Live Component Render</span> Interactive Sandbox</div>`;
-        
-        // Create a sandboxed iframe to safely render the code
-        const iframe = document.createElement('iframe');
-        iframe.style.width = '100%';
-        iframe.style.height = '400px';
-        iframe.style.border = 'none';
-        iframe.style.background = '#ffffff'; // Force white background for standard UI rendering
-        
-        previewDiv.appendChild(iframe);
-        
-        // Insert it right after the code block
-        block.parentElement.insertAdjacentElement('afterend', previewDiv);
-        
-        // Write the code into the iframe
-        const doc = iframe.contentWindow.document;
-        doc.open();
-        doc.write(code);
-        doc.close();
-    });
-    
-    scrollToBottom();
-}
-
-
-// --- Premium Error Notification System ---
+// --- Premium Toast Notifications ---
 const toastContainer = document.createElement('div');
 toastContainer.id = 'toast-container';
 toastContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
@@ -316,26 +31,19 @@ function showNotification(message, duration = 4000) {
     const toast = document.createElement('div');
     toast.style.cssText = 'background: #1e1e1e; color: #e8e8e8; padding: 14px 24px; border-radius: 8px; border-left: 4px solid var(--maroon-primary); box-shadow: 0 4px 15px rgba(0,0,0,0.6); font-size: 14px; opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; display: flex; align-items: center; min-width: 320px;';
     
-    // Sanitize the ugly API errors
     let cleanMsg = message;
-    if (cleanMsg.includes('429') || cleanMsg.includes('RESOURCE_EXHAUSTED')) {
-        cleanMsg = "Rate limit exceeded. Please wait a few seconds and try again.";
-    } else if (cleanMsg.includes('11001') || cleanMsg.includes('getaddrinfo')) {
-        cleanMsg = "Network error: Unable to reach the API. Please check your connection.";
-    } else if (cleanMsg.includes('AI_SERVICE_ERROR')) {
-        cleanMsg = cleanMsg.split('{')[0].trim(); // Strip the raw JSON dictionary dump
-    }
+    if (cleanMsg.includes('429') || cleanMsg.includes('RESOURCE_EXHAUSTED')) cleanMsg = "Rate limit exceeded. Please wait a few seconds.";
+    else if (cleanMsg.includes('11001') || cleanMsg.includes('getaddrinfo')) cleanMsg = "Network error: Unable to reach the API.";
+    else if (cleanMsg.includes('AI_SERVICE_ERROR')) cleanMsg = cleanMsg.split('{')[0].trim();
     
     toast.textContent = cleanMsg;
     toastContainer.appendChild(toast);
     
-    // Slide in
     requestAnimationFrame(() => {
         toast.style.opacity = '1';
         toast.style.transform = 'translateY(0)';
     });
 
-    // Fade out and remove
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateY(-20px)';
@@ -343,13 +51,187 @@ function showNotification(message, duration = 4000) {
     }, duration);
 }
 
-
-// Sidebar toggle logic
-const historyToggle = document.getElementById('history-toggle');
-const sidebar = document.getElementById('sidebar');
-if(historyToggle && sidebar) {
-    historyToggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        sidebar.classList.toggle('active');
+// --- Live UI Renderer ---
+function renderUIComponents(container) {
+    const htmlBlocks = container.querySelectorAll('pre code.language-html');
+    htmlBlocks.forEach(block => {
+        const code = block.textContent;
+        const previewDiv = document.createElement('div');
+        previewDiv.className = 'live-preview-box';
+        previewDiv.style.cssText = 'margin: 15px 0; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: var(--bg-deep);';
+        previewDiv.innerHTML = `<div class="preview-header" style="background: #0c0c0c; padding: 8px 15px; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--border-color);"><span>Live Component Render</span></div>`;
+        
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '400px';
+        iframe.style.border = 'none';
+        iframe.style.background = '#ffffff';
+        
+        previewDiv.appendChild(iframe);
+        block.parentElement.insertAdjacentElement('afterend', previewDiv);
+        
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(code);
+        doc.close();
     });
 }
+
+// --- Core API Logic ---
+async function loadConversations() {
+    try {
+        const res = await fetch(`${API_URL}/conversations`);
+        if (!res.ok) throw new Error("API not ready");
+        const data = await res.json();
+        historyList.innerHTML = '';
+        data.forEach(conv => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.textContent = conv.title || 'New Chat';
+            div.onclick = () => loadConversation(conv.id);
+            if (conv.id === currentConversationId) div.classList.add('active');
+            historyList.appendChild(div);
+        });
+    } catch (e) {
+        console.error("History fetch error (Backend might be asleep):", e);
+    }
+}
+
+async function loadConversation(id) {
+    currentConversationId = id;
+    hideHero();
+    try {
+        const res = await fetch(`${API_URL}/conversations/${id}`);
+        const data = await res.json();
+        chatContainer.innerHTML = '';
+        data.messages.forEach(msg => {
+            const div = document.createElement('div');
+            div.className = `message ${msg.role === 'user' ? 'user-msg' : 'ai-msg'}`;
+            div.innerHTML = msg.role === 'user' ? msg.content : marked.parse(msg.content);
+            chatContainer.appendChild(div);
+            if(msg.role === 'assistant') renderUIComponents(div);
+        });
+        loadConversations();
+        scrollToBottom();
+    } catch (e) {
+        showNotification("Failed to load conversation history.");
+    }
+}
+
+async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text && !base64Image) return;
+
+    hideHero();
+    
+    const userDiv = document.createElement('div');
+    userDiv.className = 'message user-msg';
+    userDiv.textContent = text + (base64Image ? " [Image Attached]" : "");
+    chatContainer.appendChild(userDiv);
+    
+    messageInput.value = '';
+    messageInput.style.height = 'auto'; 
+    let currentImage = base64Image;
+    base64Image = null;
+    attachBtn.style.color = 'var(--text-muted)';
+    scrollToBottom();
+
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'message ai-msg';
+    chatContainer.appendChild(aiDiv);
+
+    try {
+        const res = await fetch(`${API_URL}/chat/stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                conversation_id: currentConversationId,
+                message: text,
+                image_base64: currentImage
+            })
+        });
+
+        if (!res.ok) throw new Error("Network response was not ok");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n\n');
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.replace('data: ', '');
+                    if (dataStr.trim() === '[DONE]') {
+                        renderUIComponents(aiDiv);
+                        loadConversations();
+                        break;
+                    }
+                    try {
+                        const parsed = JSON.parse(dataStr);
+                        if (parsed.error) {
+                            aiDiv.remove();
+                            showNotification(parsed.error);
+                            break;
+                        }
+                        if (parsed.content) {
+                            fullText += parsed.content;
+                            aiDiv.innerHTML = marked.parse(fullText);
+                            scrollToBottom();
+                        }
+                        if (parsed.conversation_id) {
+                            currentConversationId = parsed.conversation_id;
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+    } catch (e) {
+        aiDiv.remove();
+        showNotification("Error connecting to backend. If on Render, wait 30 seconds for it to wake up.");
+    }
+}
+
+// --- Event Listeners ---
+sendBtn.addEventListener('click', sendMessage);
+
+messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+messageInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+});
+
+newChatBtn.addEventListener('click', () => {
+    currentConversationId = null;
+    chatContainer.innerHTML = '';
+    if (heroSection) heroSection.style.display = 'block';
+    loadConversations();
+});
+
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            base64Image = evt.target.result.split(',')[1];
+            attachBtn.style.color = 'var(--maroon-primary)';
+            showNotification("Image attached successfully.", 2000);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Initialize
+loadConversations();

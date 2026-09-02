@@ -1,4 +1,66 @@
+import os
 
+html_path = "frontend/index.html"
+css_path = "frontend/css/style.css"
+
+# --- 1. HTML: RESTORE EXACT PAST UI LAYOUT ---
+html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siddique AI</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">Siddique <span class="accent">AI</span></span>
+            </div>
+            <div class="sidebar-actions">
+                <button id="new-chat-btn" class="new-chat-btn">+ New Chat</button>
+            </div>
+            <div class="history-list" id="history-list"></div>
+            <div class="sidebar-footer">
+                <button class="disconnect-btn">Disconnect</button>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="main-content">
+            <!-- Centered Hero -->
+            <div class="hero-section" id="hero-section">
+                <h1>Siddique <span class="accent">AI</span></h1>
+                <p>System ready. What are we building?</p>
+            </div>
+
+            <!-- Chat Output -->
+            <div class="chat-container" id="chat-container"></div>
+
+            <!-- Input Area matches Past UI image perfectly -->
+            <div class="input-wrapper">
+                <button class="attach-btn" id="attach-btn" title="Attach Image">📎</button>
+                <div class="input-box">
+                    <textarea id="message-input" placeholder="Message Siddique AI... (Shift+Enter for newline)" rows="1"></textarea>
+                    <span class="status-dot-input"></span>
+                </div>
+                <button class="send-btn" id="send-btn">Send</button>
+            </div>
+        </main>
+    </div>
+
+    <input type="file" id="file-input" style="display: none;" accept="image/*">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+"""
+
+# --- 2. CSS: RESTORE PAST UI STYLING ---
+css_content = """
 :root {
     --bg-deep: #0a0a0a;       
     --bg-sidebar: #111111;    
@@ -256,3 +318,12 @@ textarea::placeholder { color: var(--text-muted); }
     margin: 12px 0;
     overflow-x: auto;
 }
+"""
+
+with open(html_path, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+with open(css_path, "w", encoding="utf-8") as f:
+    f.write(css_content)
+
+print("✅ UI successfully reverted to the classic layout.")
